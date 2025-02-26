@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Table,
   TableBody,
@@ -15,7 +15,7 @@ import {
   Typography,
   Button,
   Checkbox,
-  FormControlLabel,
+  Alert,
 } from '@mui/material';
 
 interface TradeData {
@@ -43,6 +43,7 @@ const marketData: MarketData[] = [
   { pair: 'SOL/USD', price: '169.16', change24h: '-3.44%', volume: '36.3M' },
   { pair: 'SOL/USDT', price: '169.33', change24h: '-3.40%', volume: '3.93M' },
   { pair: 'SOL/BTC', price: '.001779', change24h: '-0.04%', volume: '2.93M' },
+  { pair: 'SOL/USDC', price: '169.55', change24h: '-3.35%', volume: '4.12M' },
 ];
 
 const currentPositions: CurrentPosition[] = [
@@ -61,236 +62,261 @@ export function TradeTable() {
   });
   const [showMarketSelector, setShowMarketSelector] = useState(false);
   const [selectedPositions, setSelectedPositions] = useState<number[]>([]);
+  const [crossPairWarning, setCrossPairWarning] = useState<string | null>(null);
+
+  // Function to extract the cross pair from a market pair
+  const getCrossPair = (marketPair: string): string => {
+    if (!marketPair) return '';
+    const parts = marketPair.split('/');
+    return parts.length > 1 ? parts[1] : '';
+  };
+
+  // Update selected positions when market changes
+  useEffect(() => {
+    if (!tradeData.mkt) {
+      setSelectedPositions([]);
+      setCrossPairWarning(null);
+      return;
+    }
+
+    const crossPair = getCrossPair(tradeData.mkt);
+    const matchingPosition = currentPositions.find(position => position.symbol === crossPair);
+    
+    if (matchingPosition) {
+      setSelectedPositions([matchingPosition.id]);
+      setCrossPairWarning(null);
+    } else {
+      setSelectedPositions([]);
+      setCrossPairWarning(
+        `Please select a different market, cross pair to trade against is not available in your Current Positions`
+      );
+    }
+  }, [tradeData.mkt]);
 
   const handleMarketSelect = (market: string) => {
     setTradeData({ ...tradeData, mkt: market });
     setShowMarketSelector(false);
   };
 
-  const handleSelectAllClick = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.checked) {
-      setSelectedPositions(currentPositions.map(position => position.id));
-    } else {
-      setSelectedPositions([]);
-    }
-  };
-
-  const handlePositionSelect = (id: number) => {
-    setSelectedPositions(prev => {
-      if (prev.includes(id)) {
-        return prev.filter(posId => posId !== id);
-      } else {
-        return [...prev, id];
-      }
-    });
-  };
-
   return (
-    <div>
-      <Typography
-        variant="h6"
-        sx={{
-          color: 'white',
-          marginBottom: 2,
-          fontWeight: 500,
-        }}
-      >
-        New Position
-      </Typography>
-      <TableContainer component={Paper} sx={{ backgroundColor: '#1e1e1e', color: 'white', marginBottom: 3 }}>
-        <Table sx={{ minWidth: 650 }}>
-          <TableHead>
-            <TableRow>
-              <TableCell sx={{ color: 'white', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>Symbol</TableCell>
-              <TableCell sx={{ color: 'white', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>MKT</TableCell>
-              <TableCell sx={{ color: 'white', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>Qty</TableCell>
-              <TableCell sx={{ color: 'white', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>Value</TableCell>
-              <TableCell sx={{ color: 'white', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>Action</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            <TableRow>
-              <TableCell sx={{ color: 'white', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
-                <TextField
-                  value={tradeData.symbol}
-                  onChange={(e) => setTradeData({ ...tradeData, symbol: e.target.value })}
-                  variant="standard"
-                  sx={{
-                    input: { color: 'white' },
-                    '&:before': { borderBottomColor: 'rgba(255, 255, 255, 0.1)' },
-                  }}
-                />
-              </TableCell>
-              <TableCell sx={{ color: 'white', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
-                <Button
-                  onClick={() => setShowMarketSelector(!showMarketSelector)}
-                  sx={{
-                    color: 'white',
-                    textTransform: 'none',
-                    borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-                    borderRadius: 0,
-                    padding: '0 0 5px 0',
-                    minWidth: '120px',
-                    justifyContent: 'flex-start',
-                    '&:hover': {
-                      backgroundColor: 'transparent',
-                    },
-                  }}
-                >
-                  {tradeData.mkt || 'Select Market'}
-                </Button>
-              </TableCell>
-              <TableCell sx={{ color: 'white', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
-                <TextField
-                  value={tradeData.qty}
-                  onChange={(e) => setTradeData({ ...tradeData, qty: e.target.value })}
-                  variant="standard"
-                  sx={{
-                    input: { color: 'white' },
-                    '&:before': { borderBottomColor: 'rgba(255, 255, 255, 0.1)' },
-                  }}
-                />
-              </TableCell>
-              <TableCell sx={{ color: 'white', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
-                <TextField
-                  value={tradeData.value}
-                  disabled
-                  variant="standard"
-                  sx={{
-                    input: { color: 'white' },
-                    '&:before': { borderBottomColor: 'rgba(255, 255, 255, 0.1)' },
-                  }}
-                />
-              </TableCell>
-              <TableCell sx={{ color: 'white', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
-                <Select
-                  value={tradeData.action}
-                  onChange={(e) => setTradeData({ ...tradeData, action: e.target.value })}
-                  variant="standard"
-                  sx={{
-                    color: 'white',
-                    '&:before': { borderBottomColor: 'rgba(255, 255, 255, 0.1)' },
-                    '& .MuiSelect-icon': { color: 'white' },
-                  }}
-                >
-                  <MenuItem value="buy">Buy</MenuItem>
-                  <MenuItem value="sell">Sell</MenuItem>
-                </Select>
-              </TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
-      </TableContainer>
-
-      {showMarketSelector && (
-        <TableContainer component={Paper} sx={{ backgroundColor: '#1e1e1e', color: 'white', marginBottom: 3 }}>
-          <Table>
+    <div className="flex flex-row gap-4">
+      {/* Current Position Table */}
+      <div className="w-1/3">
+        <Typography
+          variant="h6"
+          sx={{
+            color: 'white',
+            marginBottom: 2,
+            fontWeight: 500,
+          }}
+        >
+          Current Position
+        </Typography>
+        <TableContainer component={Paper} sx={{ backgroundColor: '#1e1e1e', color: 'white', width: '100%' }}>
+          <Table sx={{ tableLayout: 'fixed' }}>
             <TableHead>
               <TableRow>
-                <TableCell sx={{ color: 'white', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>MKT</TableCell>
-                <TableCell sx={{ color: 'white', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>Price</TableCell>
-                <TableCell sx={{ color: 'white', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>24 H</TableCell>
-                <TableCell sx={{ color: 'white', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>VOL</TableCell>
+                <TableCell padding="checkbox" sx={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)', width: '15%' }}>
+                  {/* Removed the "Select All" checkbox */}
+                </TableCell>
+                <TableCell sx={{ color: 'white', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', width: '40%' }}>Symbol</TableCell>
+                <TableCell sx={{ color: 'white', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', width: '45%' }}>Qty</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {marketData.map((market) => (
+              {currentPositions.map((position) => (
                 <TableRow
-                  key={market.pair}
-                  onClick={() => handleMarketSelect(market.pair)}
+                  key={position.id}
                   sx={{
-                    cursor: 'pointer',
-                    '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.1)' },
+                    backgroundColor: selectedPositions.includes(position.id) ? 'rgba(255, 255, 255, 0.05)' : 'transparent',
                   }}
                 >
-                  <TableCell sx={{ color: 'white', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
-                    {market.pair}
+                  <TableCell padding="checkbox" sx={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                    <Checkbox
+                      sx={{
+                        color: 'rgba(255, 255, 255, 0.7)',
+                        '&.Mui-checked': {
+                          color: 'white',
+                        },
+                      }}
+                      checked={selectedPositions.includes(position.id)}
+                      disabled={true} // Disable user interaction
+                    />
                   </TableCell>
                   <TableCell sx={{ color: 'white', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
-                    {market.price}
-                  </TableCell>
-                  <TableCell
-                    sx={{
-                      color: market.change24h.startsWith('-') ? '#ff4d4d' : '#4caf50',
-                      borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-                    }}
-                  >
-                    {market.change24h}
+                    {position.symbol}
                   </TableCell>
                   <TableCell sx={{ color: 'white', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
-                    {market.volume}
+                    {position.qty}
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         </TableContainer>
-      )}
+      </div>
 
-      <Typography
-        variant="h6"
-        sx={{
-          color: 'white',
-          marginBottom: 2,
-          marginTop: 4,
-          fontWeight: 500,
-        }}
-      >
-        Current Position
-      </Typography>
-      <TableContainer component={Paper} sx={{ backgroundColor: '#1e1e1e', color: 'white' }}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell padding="checkbox" sx={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
-                <Checkbox
-                  sx={{
-                    color: 'rgba(255, 255, 255, 0.7)',
-                    '&.Mui-checked': {
-                      color: 'white',
-                    },
-                  }}
-                  indeterminate={selectedPositions.length > 0 && selectedPositions.length < currentPositions.length}
-                  checked={selectedPositions.length === currentPositions.length}
-                  onChange={handleSelectAllClick}
-                />
-              </TableCell>
-              <TableCell sx={{ color: 'white', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>Symbol</TableCell>
-              <TableCell sx={{ color: 'white', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>Qty</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {currentPositions.map((position) => (
-              <TableRow
-                key={position.id}
-                sx={{
-                  '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.1)' },
-                  backgroundColor: selectedPositions.includes(position.id) ? 'rgba(255, 255, 255, 0.05)' : 'transparent',
-                }}
-              >
-                <TableCell padding="checkbox" sx={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
-                  <Checkbox
+      {/* New Position Table */}
+      <div className="w-2/3">
+        <Typography
+          variant="h6"
+          sx={{
+            color: 'white',
+            marginBottom: 2,
+            fontWeight: 500,
+          }}
+        >
+          New Position
+        </Typography>
+        <TableContainer component={Paper} sx={{ backgroundColor: '#1e1e1e', color: 'white', marginBottom: 3, width: '100%' }}>
+          <Table sx={{ tableLayout: 'fixed' }}>
+            <TableHead>
+              <TableRow>
+                <TableCell sx={{ color: 'white', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', width: '15%' }}>Symbol</TableCell>
+                <TableCell sx={{ color: 'white', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', width: '18%' }}>MKT</TableCell>
+                <TableCell sx={{ color: 'white', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', width: '19%', paddingLeft: '40px' }}>Qty</TableCell>
+                <TableCell sx={{ color: 'white', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', width: '13%' }}>Value</TableCell>
+                <TableCell sx={{ color: 'white', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', width: '15%' }}>Trade</TableCell>
+                <TableCell sx={{ color: 'white', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', width: '20%' }}>Action</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              <TableRow>
+                <TableCell sx={{ color: 'white', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                  <TextField
+                    value={tradeData.symbol}
+                    onChange={(e) => setTradeData({ ...tradeData, symbol: e.target.value })}
+                    variant="standard"
                     sx={{
-                      color: 'rgba(255, 255, 255, 0.7)',
-                      '&.Mui-checked': {
-                        color: 'white',
+                      input: { color: 'white' },
+                      '&:before': { borderBottomColor: 'rgba(255, 255, 255, 0.1)' },
+                    }}
+                  />
+                </TableCell>
+                <TableCell sx={{ color: 'white', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', paddingRight: '20px' }}>
+                  <Button
+                    onClick={() => setShowMarketSelector(!showMarketSelector)}
+                    sx={{
+                      color: 'white',
+                      textTransform: 'none',
+                      borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                      borderRadius: 0,
+                      padding: '0 0 5px 0',
+                      minWidth: '120px',
+                      justifyContent: 'flex-start',
+                      '&:hover': {
+                        backgroundColor: 'transparent',
                       },
                     }}
-                    checked={selectedPositions.includes(position.id)}
-                    onChange={() => handlePositionSelect(position.id)}
+                  >
+                    {tradeData.mkt || 'Select Market'}
+                  </Button>
+                </TableCell>
+                <TableCell sx={{ color: 'white', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', paddingLeft: '40px' }}>
+                  <TextField
+                    value={tradeData.qty}
+                    onChange={(e) => setTradeData({ ...tradeData, qty: e.target.value })}
+                    variant="standard"
+                    fullWidth
+                    sx={{
+                      input: { color: 'white' },
+                      '&:before': { borderBottomColor: 'rgba(255, 255, 255, 0.1)' },
+                      width: '100%',
+                    }}
                   />
                 </TableCell>
                 <TableCell sx={{ color: 'white', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
-                  {position.symbol}
+                  <TextField
+                    value={tradeData.value}
+                    disabled
+                    variant="standard"
+                    sx={{
+                      input: { color: 'white' },
+                      '&:before': { borderBottomColor: 'rgba(255, 255, 255, 0.1)' },
+                    }}
+                  />
                 </TableCell>
                 <TableCell sx={{ color: 'white', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
-                  {position.qty}
+                  <Select
+                    value={tradeData.action}
+                    onChange={(e) => setTradeData({ ...tradeData, action: e.target.value })}
+                    variant="standard"
+                    sx={{
+                      color: 'white',
+                      '&:before': { borderBottomColor: 'rgba(255, 255, 255, 0.1)' },
+                      '& .MuiSelect-icon': { color: 'white' },
+                    }}
+                  >
+                    <MenuItem value="buy">Buy</MenuItem>
+                    <MenuItem value="sell">Sell</MenuItem>
+                  </Select>
+                </TableCell>
+                <TableCell sx={{ color: 'white', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                  <Button
+                    variant="contained"
+                    sx={{
+                      backgroundColor: '#4caf50', // Brighter green color
+                      color: 'white', // White text for better contrast
+                      fontWeight: 'bold',
+                      '&:hover': {
+                        backgroundColor: '#45a049', // Slightly darker green on hover
+                      },
+                    }}
+                  >
+                    SEND
+                  </Button>
                 </TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+            </TableBody>
+          </Table>
+        </TableContainer>
+
+        {/* Warning message for missing cross pair */}
+        {crossPairWarning && (
+          <Typography 
+            sx={{ 
+              color: '#ff4d4d', 
+              marginBottom: 2,
+              fontSize: '0.875rem',
+              fontWeight: 500
+            }}
+          >
+            {crossPairWarning}
+          </Typography>
+        )}
+
+        {showMarketSelector && (
+          <TableContainer component={Paper} sx={{ backgroundColor: '#1e1e1e', color: 'white', marginBottom: 3 }}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ color: 'white', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', width: '50%' }}>MKT</TableCell>
+                  <TableCell sx={{ color: 'white', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', width: '50%' }}>Price</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {marketData.map((market) => (
+                  <TableRow
+                    key={market.pair}
+                    onClick={() => handleMarketSelect(market.pair)}
+                    sx={{
+                      cursor: 'pointer',
+                      '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.1)' },
+                    }}
+                  >
+                    <TableCell sx={{ color: 'white', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                      {market.pair}
+                    </TableCell>
+                    <TableCell sx={{ color: 'white', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                      {market.price}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
+      </div>
     </div>
   );
 }
