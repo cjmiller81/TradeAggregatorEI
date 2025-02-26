@@ -93,6 +93,31 @@ export function TradeTable() {
     }
   }, [tradeData.mkt]);
 
+  // Calculate value based on qty and selected market price
+  useEffect(() => {
+    if (!tradeData.mkt || !tradeData.qty) {
+      setTradeData(prev => ({ ...prev, value: '' }));
+      return;
+    }
+
+    const selectedMarket = marketData.find(market => market.pair === tradeData.mkt);
+    if (!selectedMarket) {
+      setTradeData(prev => ({ ...prev, value: '' }));
+      return;
+    }
+
+    const price = parseFloat(selectedMarket.price);
+    const qty = parseFloat(tradeData.qty.replace(/,/g, ''));
+
+    if (isNaN(price) || isNaN(qty)) {
+      setTradeData(prev => ({ ...prev, value: '' }));
+      return;
+    }
+
+    const calculatedValue = (price * qty).toFixed(2);
+    setTradeData(prev => ({ ...prev, value: calculatedValue }));
+  }, [tradeData.mkt, tradeData.qty]);
+
   const handleMarketSelect = (market: string) => {
     setTradeData({ ...tradeData, mkt: market });
     setShowMarketSelector(false);
@@ -233,6 +258,10 @@ export function TradeTable() {
                     sx={{
                       input: { color: 'white' },
                       '&:before': { borderBottomColor: 'rgba(255, 255, 255, 0.1)' },
+                      '& .MuiInputBase-input.Mui-disabled': {
+                        color: 'white',
+                        WebkitTextFillColor: 'white',
+                      }
                     }}
                   />
                 </TableCell>
